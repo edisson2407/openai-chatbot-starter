@@ -6,7 +6,7 @@ from openai import OpenAI
 
 # 1. CONFIGURACIÓN DE PÁGINA
 load_dotenv()
-st.set_page_config(page_title="NomadaWare AI", page_icon="💻", layout="wide")
+st.set_page_config(page_title="AlzerTech", page_icon="💻", layout="wide")
 
 # === Ajuste para Secrets (OpenAI) ===
 API_KEY = os.getenv("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY")
