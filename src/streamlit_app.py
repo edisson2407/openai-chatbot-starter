@@ -7,6 +7,10 @@ from openai import OpenAI
 load_dotenv()
 st.set_page_config(page_title="NomadaWare AI", page_icon="💻", layout="wide")
 
+# === Ajuste pequeño para Secrets (Streamlit Cloud) ===
+API_KEY = os.getenv("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY")
+MODEL = os.getenv("OPENAI_MODEL") or st.secrets.get("OPENAI_MODEL", "gpt-4o-mini")
+
 # 2. DATOS DE PRODUCTOS (QUEMADOS EN CÓDIGO)
 # Estos datos se usarán para la web Y para entrenar al chat en tiempo real
 productos = [
@@ -147,7 +151,8 @@ if "history" not in st.session_state:
         """}
     ]
 
-client = OpenAI()
+# === Ajuste pequeño: crear cliente con api_key desde env o secrets ===
+client = OpenAI(api_key=API_KEY)
 
 # Este es el componente mágico: Una "Caja" que se abre al hacer clic
 # El CSS de arriba lo posiciona en la esquina inferior derecha
@@ -176,7 +181,7 @@ with st.popover("💬"):
         try:
             with st.spinner("..."):
                 resp = client.chat.completions.create(
-                    model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+                    model=MODEL,
                     messages=st.session_state.history,
                     temperature=0.7,
                 )
