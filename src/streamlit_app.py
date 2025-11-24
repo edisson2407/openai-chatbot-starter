@@ -1,4 +1,5 @@
 import os
+import urllib.parse
 from dotenv import load_dotenv
 import streamlit as st
 from openai import OpenAI
@@ -7,19 +8,43 @@ from openai import OpenAI
 load_dotenv()
 st.set_page_config(page_title="NomadaWare AI", page_icon="💻", layout="wide")
 
-# === Ajuste pequeño para Secrets (Streamlit Cloud) ===
+# === Ajuste para Secrets (OpenAI) ===
 API_KEY = os.getenv("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY")
 MODEL = os.getenv("OPENAI_MODEL") or st.secrets.get("OPENAI_MODEL", "gpt-4o-mini")
 
+# === Ajuste para imágenes desde GitHub ===
+# Opción simple: una sola base
+IMG_BASE_URL = os.getenv("IMG_BASE_URL") or st.secrets.get("IMG_BASE_URL")
+
+# Opción por partes (se usa si no definiste IMG_BASE_URL)
+GITHUB_USER = os.getenv("GITHUB_USER") or st.secrets.get("GITHUB_USER")
+GITHUB_REPO = os.getenv("GITHUB_REPO") or st.secrets.get("GITHUB_REPO")
+GITHUB_BRANCH = os.getenv("GITHUB_BRANCH") or st.secrets.get("GITHUB_BRANCH", "main")
+IMG_PATH = os.getenv("IMG_PATH") or st.secrets.get("IMG_PATH", "assets/img")
+
+def img_url(filename: str) -> str:
+    """
+    Resuelve la URL final de la imagen:
+    1) Si hay IMG_BASE_URL, utiliza ese prefijo.
+    2) Si no, intenta construir la URL cruda de GitHub con USER/REPO/BRANCH/IMG_PATH.
+    3) Si nada está configurado, usa un placeholder.
+    """
+    if IMG_BASE_URL:
+        return f"{IMG_BASE_URL.rstrip('/')}/{filename}"
+    if GITHUB_USER and GITHUB_REPO:
+        return f"https://raw.githubusercontent.com/{GITHUB_USER}/{GITHUB_REPO}/{GITHUB_BRANCH}/{IMG_PATH}/{filename}"
+    # Placeholder de emergencia (si no configuraste nada)
+    return f"https://placehold.co/300x200/png?text={urllib.parse.quote(filename)}"
+
 # 2. DATOS DE PRODUCTOS (QUEMADOS EN CÓDIGO)
-# Estos datos se usarán para la web Y para entrenar al chat en tiempo real
+# Ahora "img" es solo el nombre de archivo; se resuelve con img_url(...)
 productos = [
-    {"id": 1, "nombre": "Laptop Lenovo IdeaPad Slim 3", "precio": 329.99, "specs": "Ryzen 3 7320U, 8GB RAM, 256GB SSD", "img": "https://placehold.co/300x200/png?text=Lenovo+Slim"},
-    {"id": 2, "nombre": "HP Envy x360 2-in-1", "precio": 850.00, "specs": "Core i7 1355U, 16GB RAM, Pantalla Táctil", "img": "https://placehold.co/300x200/png?text=HP+Envy"},
-    {"id": 3, "nombre": "MacBook Air M1", "precio": 799.00, "specs": "Chip M1, 8GB RAM, 256GB SSD, Silver", "img": "https://placehold.co/300x200/png?text=MacBook+Air"},
-    {"id": 4, "nombre": "Asus Vivobook Go", "precio": 409.99, "specs": "Ryzen 5 7520U, 16GB RAM, 512GB SSD", "img": "https://placehold.co/300x200/png?text=Asus+Vivo"},
-    {"id": 5, "nombre": "Monitor Gamer Samsung Odyssey", "precio": 250.00, "specs": "27 pulgadas, 144Hz, Curvo", "img": "https://placehold.co/300x200/png?text=Samsung+Odyssey"},
-    {"id": 6, "nombre": "Mouse Logitech MX Master 3S", "precio": 99.00, "specs": "Ergonómico, Bluetooth, 8000 DPI", "img": "https://placehold.co/300x200/png?text=MX+Master+3S"},
+    {"id": 1, "nombre": "Laptop Lenovo IdeaPad Slim 3", "precio": 329.99, "specs": "Ryzen 3 7320U, 8GB RAM, 256GB SSD", "img": "lenovo-slim.jpg"},
+    {"id": 2, "nombre": "HP Envy x360 2-in-1", "precio": 850.00, "specs": "Core i7 1355U, 16GB RAM, Pantalla Táctil", "img": "hp-envy.jpg"},
+    {"id": 3, "nombre": "MacBook Air M1", "precio": 799.00, "specs": "Chip M1, 8GB RAM, 256GB SSD, Silver", "img": "macbook-air-m1.jpg"},
+    {"id": 4, "nombre": "Asus Vivobook Go", "precio": 409.99, "specs": "Ryzen 5 7520U, 16GB RAM, 512GB SSD", "img": "asus-vivobook-go.jpg"},
+    {"id": 5, "nombre": "Monitor Gamer Samsung Odyssey", "precio": 250.00, "specs": "27 pulgadas, 144Hz, Curvo", "img": "samsung-odyssey.jpg"},
+    {"id": 6, "nombre": "Mouse Logitech MX Master 3S", "precio": 99.00, "specs": "Ergonómico, Bluetooth, 8000 DPI", "img": "logitech-mx-master-3s.jpg"},
 ]
 
 # Convertimos los productos a texto para que la IA los entienda
@@ -121,9 +146,11 @@ for i in range(0, len(productos_visibles), 3):
         if i + j < len(productos_visibles):
             prod = productos_visibles[i + j]
             with cols[j]:
+                # Construir la URL de la imagen a partir del nombre de archivo
+                img_src = img_url(prod['img'])
                 st.markdown(f"""
                 <div class="card">
-                    <img src="{prod['img']}" style="width:100%; border-radius:5px;">
+                    <img src="{img_src}" style="width:100%; border-radius:5px;">
                     <div class="name">{prod['nombre']}</div>
                     <div class="specs">{prod['specs']}</div>
                     <div class="price">${prod['precio']}</div>
@@ -151,7 +178,7 @@ if "history" not in st.session_state:
         """}
     ]
 
-# === Ajuste pequeño: crear cliente con api_key desde env o secrets ===
+# Cliente OpenAI con API key desde env o secrets
 client = OpenAI(api_key=API_KEY)
 
 # Este es el componente mágico: Una "Caja" que se abre al hacer clic
