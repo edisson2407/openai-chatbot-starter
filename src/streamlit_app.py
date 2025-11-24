@@ -3,11 +3,6 @@ from dotenv import load_dotenv
 import streamlit as st
 from openai import OpenAI
 
-# === NUEVO: para traer imágenes y embebidas en base64 ===
-import requests
-from io import BytesIO
-import base64
-
 # 1. CONFIGURACIÓN DE PÁGINA
 load_dotenv()
 st.set_page_config(page_title="NomadaWare AI", page_icon="💻", layout="wide")
@@ -17,6 +12,7 @@ API_KEY = os.getenv("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY")
 MODEL = os.getenv("OPENAI_MODEL") or st.secrets.get("OPENAI_MODEL", "gpt-4o-mini")
 
 # 2. DATOS DE PRODUCTOS (QUEMADOS EN CÓDIGO)
+# Estos datos se usarán para la web Y para entrenar al chat en tiempo real
 productos = [
     {"id": 1, "nombre": "Laptop Lenovo IdeaPad Slim 3", "precio": 329.99, "specs": "Ryzen 3 7320U, 8GB RAM, 256GB SSD", "img": "https://placehold.co/300x200/png?text=Lenovo+Slim"},
     {"id": 2, "nombre": "HP Envy x360 2-in-1", "precio": 850.00, "specs": "Core i7 1355U, 16GB RAM, Pantalla Táctil", "img": "https://placehold.co/300x200/png?text=HP+Envy"},
@@ -26,33 +22,13 @@ productos = [
     {"id": 6, "nombre": "Mouse Logitech MX Master 3S", "precio": 99.00, "specs": "Ergonómico, Bluetooth, 8000 DPI", "img": "https://placehold.co/300x200/png?text=MX+Master+3S"},
 ]
 
+# Convertimos los productos a texto para que la IA los entienda
 inventario_texto = "\n".join([f"- {p['nombre']}: ${p['precio']} ({p['specs']})" for p in productos])
-
-# === NUEVO: helper para traer imagen y retornarla como data-uri base64 ===
-@st.cache_data(show_spinner=False)
-def image_data_uri(url: str) -> str:
-    def _fallback(seed: int):
-        r = requests.get(f"https://picsum.photos/seed/{seed}/600/400", timeout=10)
-        r.raise_for_status()
-        return r.content, "image/jpeg"
-
-    try:
-        r = requests.get(url, timeout=10)
-        r.raise_for_status()
-        content = r.content
-        # Deducir mime simple por extensión conocida
-        mime = "image/png" if ".png" in url.lower() else "image/jpeg"
-    except Exception:
-        # Fallback si falla la URL original
-        seed = abs(hash(url)) % 9999
-        content, mime = _fallback(seed)
-
-    b64 = base64.b64encode(content).decode("utf-8")
-    return f"data:{mime};base64,{b64}"
 
 # 3. CONFIGURACIÓN CSS (ESTILOS Y BURBUJA FLOTANTE)
 st.markdown("""
 <style>
+    /* Navbar Estilo NomadaWare */
     .navbar {
         background-color: #111;
         padding: 20px;
@@ -63,6 +39,8 @@ st.markdown("""
         justify-content: space-between; 
         align-items: center;
     }
+    
+    /* Tarjetas de producto */
     .card {
         background-color: white;
         border: 1px solid #ddd;
@@ -76,21 +54,20 @@ st.markdown("""
         flex-direction: column;
         justify-content: space-between;
     }
-    .card img {
-        width: 100%;
-        border-radius: 5px;
-        margin-bottom: 10px;
-        display: block;
-    }
     .price { color: #e91e63; font-size: 1.2em; font-weight: bold; }
     .name { font-weight: bold; margin: 10px 0; color: #333; }
     .specs { font-size: 0.8em; color: #666; margin-bottom: 10px;}
+
+    /* BURBUJA FLOTANTE (CSS HACK) 
+       Esto mueve el botón del st.popover a la esquina inferior derecha */
     [data-testid="stPopover"] {
         position: fixed;
         bottom: 30px;
         right: 30px;
         z-index: 9999;
     }
+    
+    /* Estilo del botón de la burbuja */
     [data-testid="stPopover"] > div > button {
         width: 60px;
         height: 60px;
@@ -109,11 +86,16 @@ st.markdown("""
         transform: scale(1.1);
         transition: all 0.2s;
     }
+    
+    /* Ajuste para que el contenido no quede oculto tras la burbuja */
     .block-container { padding-bottom: 100px; }
+
 </style>
 """, unsafe_allow_html=True)
 
 # 4. INTERFAZ VISUAL (LA TIENDA)
+
+# Header HTML
 st.markdown(f"""
 <div class="navbar">
     <div style="font-size:24px; font-weight:bold;">NomadaWare <span style="font-size:14px; font-weight:normal;">AI Store</span></div>
@@ -121,26 +103,27 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+# Buscador y Filtros (Visual)
 col_search, col_void = st.columns([3,1])
 with col_search:
     search = st.text_input("🔍 ¿Qué estás buscando?", placeholder="Ej: Laptop Gamer, Mouse...")
 
 st.subheader("🔥 Ofertas Destacadas")
 
+# GRID DE PRODUCTOS
+# Filtramos productos según búsqueda
 productos_visibles = [p for p in productos if search.lower() in p['nombre'].lower()]
 
-# === AJUSTE: embebemos la imagen con data-uri dentro del HTML de la card ===
+# Lógica para mostrar en columnas de 3
 for i in range(0, len(productos_visibles), 3):
     cols = st.columns(3)
     for j in range(3):
         if i + j < len(productos_visibles):
             prod = productos_visibles[i + j]
-            # Construir data URI (cacheado)
-            img_uri = image_data_uri(prod["img"])
             with cols[j]:
                 st.markdown(f"""
                 <div class="card">
-                    <img src="{img_uri}" alt="{prod['nombre']}">
+                    <img src="{prod['img']}" style="width:100%; border-radius:5px;">
                     <div class="name">{prod['nombre']}</div>
                     <div class="specs">{prod['specs']}</div>
                     <div class="price">${prod['precio']}</div>
@@ -150,6 +133,9 @@ for i in range(0, len(productos_visibles), 3):
                     st.toast(f"{prod['nombre']} agregado! 🛒")
 
 # 5. CHATBOT INTEGRADO (EN BURBUJA)
+# Usamos st.popover para crear el efecto de ventana emergente
+
+# Iniciamos el historial con el contexto de los productos
 if "history" not in st.session_state:
     st.session_state.history = [
         {"role": "system", "content": f"""
@@ -165,24 +151,33 @@ if "history" not in st.session_state:
         """}
     ]
 
-# Cliente OpenAI con API key desde env o secrets
+# === Ajuste pequeño: crear cliente con api_key desde env o secrets ===
 client = OpenAI(api_key=API_KEY)
 
+# Este es el componente mágico: Una "Caja" que se abre al hacer clic
+# El CSS de arriba lo posiciona en la esquina inferior derecha
 with st.popover("💬"):
     st.markdown("### 🤖 Asistente NomadaWare")
     st.caption("Pregúntame por precios o recomendaciones.")
     
+    # Contenedor del chat (scrollable)
     chat_container = st.container(height=300)
+    
     with chat_container:
         for msg in st.session_state.history:
             if msg["role"] != "system":
                 st.chat_message(msg["role"]).write(msg["content"])
     
+    # Input del chat (dentro de la burbuja)
     prompt = st.chat_input("Escribe aquí...", key="chat_input_bubble")
+    
     if prompt:
+        # 1. Mostrar mensaje usuario
         st.session_state.history.append({"role": "user", "content": prompt})
         with chat_container:
             st.chat_message("user").write(prompt)
+        
+        # 2. Llamar a OpenAI
         try:
             with st.spinner("..."):
                 resp = client.chat.completions.create(
@@ -191,8 +186,11 @@ with st.popover("💬"):
                     temperature=0.7,
                 )
                 reply = resp.choices[0].message.content
+                
+                # 3. Mostrar respuesta
                 st.session_state.history.append({"role": "assistant", "content": reply})
                 with chat_container:
                     st.chat_message("assistant").write(reply)
+                    
         except Exception as e:
             st.error(f"Error: {e}")
