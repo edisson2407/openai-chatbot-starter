@@ -184,7 +184,7 @@ client = OpenAI(api_key=API_KEY)
 # Este es el componente mágico: Una "Caja" que se abre al hacer clic
 # El CSS de arriba lo posiciona en la esquina inferior derecha
 with st.popover("💬"):
-    st.markdown("### 🤖 Asistente NomadaWare")
+    st.markdown("### 🤖 Asistente AlzerTech")
     st.caption("Pregúntame por precios o recomendaciones.")
     
     # Contenedor del chat (scrollable)
