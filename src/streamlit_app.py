@@ -123,7 +123,7 @@ st.markdown("""
 # Header HTML
 st.markdown(f"""
 <div class="navbar">
-    <div style="font-size:24px; font-weight:bold;">NomadaWare <span style="font-size:14px; font-weight:normal;">AI Store</span></div>
+    <div style="font-size:24px; font-weight:bold;">AlzerTech <span style="font-size:14px; font-weight:normal;">Store</span></div>
     <div>🛒 Carrito (0) &nbsp; | &nbsp; 👤 Cuenta</div>
 </div>
 """, unsafe_allow_html=True)
