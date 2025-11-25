@@ -168,6 +168,7 @@ if "history" not in st.session_state:
         {"role": "system", "content": f"""
         Eres el asistente virtual de AlzerTech. 
         Tu objetivo es ayudar al cliente a comprar productos de tecnología.
+        Unicamente responde sobre el contexto de la pagina, no de otros temas.
         Sé amable, breve y persuasivo.
         
         ESTE ES EL INVENTARIO ACTUAL QUE TIENES DISPONIBLE:
