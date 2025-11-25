@@ -166,7 +166,7 @@ for i in range(0, len(productos_visibles), 3):
 if "history" not in st.session_state:
     st.session_state.history = [
         {"role": "system", "content": f"""
-        Eres el asistente virtual de NomadaWare. 
+        Eres el asistente virtual de AlzerTech. 
         Tu objetivo es ayudar al cliente a comprar productos de tecnología.
         Sé amable, breve y persuasivo.
         
